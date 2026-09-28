@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TORQUE — Repair Manual for Everything</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Work+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          paper: { DEFAULT: '#EDEAE2', dark: '#E2DDCF' },
+          ink: '#1F2421',
+          rust: { DEFAULT: '#C4592A', dark: '#A8481F' },
+          steel: '#3A5A66',
+          moss: '#4C6444',
+          line: '#B8B0A0',
+        },
+        fontFamily: {
+          display: ['"Big Shoulders Display"', 'sans-serif'],
+          body: ['"Work Sans"', 'sans-serif'],
+          mono: ['"JetBrains Mono"', 'monospace'],
+        },
+      }
+    }
+  }
+</script>
+<style>
+  body { font-family: 'Work Sans', sans-serif; background:#EDEAE2; color:#1F2421; }
+  .font-display { font-family: 'Big Shoulders Display', sans-serif; }
+  .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+  .dot-grid {
+    background-image: radial-gradient(#1F2421 1px, transparent 1px);
+    background-size: 22px 22px;
+    background-position: -8px -8px;
+    opacity: 0.08;
+  }
+
+  .ticket {
+    clip-path: polygon(
+      0% 4%, 2% 0%, 98% 0%, 100% 4%,
+      100% 96%, 98% 100%, 2% 100%, 0% 96%
+    );
+  }
+  .ticket::before {
+    content: "";
+    position: absolute;
+    inset: 10px;
+    border: 1.5px dashed rgba(31,36,33,0.25);
+    pointer-events: none;
+  }
+
+  .leader-line { position:absolute; height:1px; background:#1F2421; opacity:0.35; transform-origin:left center; }
+  .leader-dot { position:absolute; width:6px; height:6px; border-radius:50%; background:#C4592A; }
+
+  .score-ring { transform: rotate(-90deg); transition: stroke-dashoffset 1.4s cubic-bezier(.16,1,.3,1); }
+
+  .chip[aria-pressed="true"] { background:#1F2421; color:#EDEAE2; }
+
+  .scroll-row::-webkit-scrollbar { height: 8px; }
+  .scroll-row::-webkit-scrollbar-thumb { background:#B8B0A0; border-radius:4px; }
+
+  .card-lift { transition: transform .25s ease, box-shadow .25s ease; }
+  .card-lift:hover { transform: translateY(-4px); box-shadow: 0 12px 24px -8px rgba(31,36,33,0.25); }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+
+  ::selection { background:#C4592A; color:#EDEAE2; }
+  :focus-visible { outline: 2px solid #C4592A; outline-offset: 2px; }
+</style>
+</head>
+<body class="font-body">
+
+<!-- Utility bar -->
+<div class="bg-ink text-paper text-xs font-mono">
+  <div class="max-w-7xl mx-auto px-5 py-1.5 flex justify-between items-center">
+    <span class="hidden sm:inline">RIGHT TO REPAIR · IT'S YOUR DEVICE</span>
+    <span class="sm:hidden">RIGHT TO REPAIR</span>
+    <div class="flex gap-4">
+      <a href="#" class="hover:text-rust transition-colors">Pro Accounts</a>
+      <a href="#" class="hover:text-rust transition-colors">Track Order</a>
+    </div>
+  </div>
+</div>
+
+<!-- Header -->
+<header class="sticky top-0 z-40 bg-paper/95 backdrop-blur border-b border-line">
+  <div class="max-w-7xl mx-auto px-5 py-3 flex items-center gap-6">
+    <a href="#" class="font-display font-900 text-3xl tracking-tight flex items-center gap-2 shrink-0">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#C4592A" stroke-width="2.2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      TORQUE
+    </a>
+
+    <nav class="hidden lg:flex items-center gap-7 font-medium text-sm">
+      <a href="#guides" class="hover:text-rust transition-colors">Guides</a>
+      <a href="#categories" class="hover:text-rust transition-colors">Devices</a>
+      <a href="#parts" class="hover:text-rust transition-colors">Parts &amp; Tools</a>
+      <a href="#score" class="hover:text-rust transition-colors">Repairability</a>
+    </nav>
+
+    <div class="flex-1 hidden md:flex relative">
+      <input id="headerSearch" type="text" placeholder="Search your device or part…"
+        class="w-full bg-paper-dark border border-line rounded-full pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-rust transition-colors">
+      <svg class="absolute left-3.5 top-2.5 w-4 h-4 text-ink/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5" stroke-linecap="round"/></svg>
+    </div>
+
+    <button class="shrink-0 relative" aria-label="Cart">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1F2421" stroke-width="2"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M3 3h2l1.6 11.2a2 2 0 0 0 2 1.8h8.4a2 2 0 0 0 2-1.7L20 7H6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="absolute -top-1.5 -right-1.5 bg-rust text-white text-[10px] font-mono w-4 h-4 rounded-full flex items-center justify-center">2</span>
+    </button>
+
+    <button id="menuBtn" class="lg:hidden shrink-0" aria-label="Toggle menu" aria-expanded="false">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1F2421" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+
+  <!-- mobile panel -->
+  <div id="mobilePanel" class="hidden lg:hidden border-t border-line bg-paper px-5 py-4 space-y-4">
+    <div class="relative">
+      <input type="text" placeholder="Search your device or part…" class="w-full bg-paper-dark border border-line rounded-full pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-rust">
+      <svg class="absolute left-3.5 top-2.5 w-4 h-4 text-ink/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5" stroke-linecap="round"/></svg>
+    </div>
+    <nav class="flex flex-col gap-3 font-medium">
+      <a href="#guides">Guides</a>
+      <a href="#categories">Devices</a>
+      <a href="#parts">Parts &amp; Tools</a>
+      <a href="#score">Repairability</a>
+    </nav>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="relative overflow-hidden border-b border-line">
+  <div class="absolute inset-0 dot-grid"></div>
+  <div class="max-w-7xl mx-auto px-5 py-16 md:py-24 grid lg:grid-cols-2 gap-12 items-center relative">
+
+    <div>
+      <span class="inline-block font-mono text-xs tracking-widest text-rust border border-rust rounded-full px-3 py-1 mb-5">FREE MANUALS · NO ACCOUNT NEEDED</span>
+      <h1 class="font-display font-900 text-5xl sm:text-6xl md:text-7xl leading-[0.95] tracking-tight">
+        ANYTHING<br>CAN BE<br><span class="text-rust">FIXED.</span>
+      </h1>
+      <p class="mt-6 text-lg text-ink/70 max-w-md">41,000+ step-by-step repair guides, real replacement parts, and the right tool for the job — for the device in your hands right now.</p>
+
+      <div class="mt-8 relative max-w-md">
+        <input id="heroSearch" type="text" placeholder="iPhone 14 screen, MacBook battery…"
+          class="w-full bg-white border-2 border-ink rounded-lg pl-5 pr-32 py-4 text-base focus:outline-none focus:border-rust transition-colors">
+        <button class="absolute right-1.5 top-1.5 bottom-1.5 bg-ink hover:bg-rust text-paper font-mono text-xs tracking-wide px-4 rounded-md transition-colors">FIND&nbsp;THE&nbsp;FIX</button>
+        <div id="heroSuggest" class="hidden absolute z-20 top-full mt-2 left-0 right-0 bg-white border border-line rounded-lg shadow-lg overflow-hidden font-mono text-sm"></div>
+      </div>
+
+      <div class="mt-6 flex flex-wrap gap-2 text-xs font-mono">
+        <span class="text-ink/50 self-center mr-1">TRY:</span>
+        <button class="quick-chip px-3 py-1 border border-line rounded-full hover:border-rust hover:text-rust transition-colors">Phone</button>
+        <button class="quick-chip px-3 py-1 border border-line rounded-full hover:border-rust hover:text-rust transition-colors">Laptop</button>
+        <button class="quick-chip px-3 py-1 border border-line rounded-full hover:border-rust hover:text-rust transition-colors">Game Console</button>
+        <button class="quick-chip px-3 py-1 border border-line rounded-full hover:border-rust hover:text-rust transition-colors">Appliance</button>
+      </div>
+    </div>
+
+    <!-- Signature: service ticket with exploded leader lines -->
+    <div class="relative h-[420px] hidden md:block">
+      <div class="leader-line" style="top:18%; left:62%; width:140px; transform:rotate(-18deg);"></div>
+      <div class="leader-dot" style="top:calc(18% - 3px); left:calc(62% + 137px);"></div>
+      <span class="absolute font-mono text-[11px] text-ink/60" style="top:10%; left:80%;">01 — DISPLAY</span>
+
+      <div class="leader-line" style="top:42%; left:4%; width:120px; transform:rotate(8deg);"></div>
+      <div class="leader-dot" style="top:calc(42% + 12px); left:0%;"></div>
+      <span class="absolute font-mono text-[11px] text-ink/60 text-right" style="top:38%; left:-8%; width:110px;">02 — BATTERY</span>
+
+      <div class="leader-line" style="top:74%; left:60%; width:130px; transform:rotate(20deg);"></div>
+      <div class="leader-dot" style="top:calc(74% + 41px); left:calc(60% + 128px);"></div>
+      <span class="absolute font-mono text-[11px] text-ink/60" style="top:85%; left:78%;">03 — LOGIC BOARD</span>
+
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-2 w-72">
+        <div class="ticket relative bg-white border border-ink/80 px-6 py-7 shadow-xl">
+          <div class="flex justify-between items-start mb-5">
+            <span class="font-display font-800 text-xl">SERVICE TICKET</span>
+            <span class="font-mono text-[10px] border border-rust text-rust rounded px-2 py-0.5 -rotate-6">REPAIRABLE</span>
+          </div>
+          <div class="space-y-3 font-mono text-xs text-ink/70">
+            <div class="flex justify-between border-b border-dashed border-line pb-2"><span>DEVICE</span><span class="text-ink">Any, really</span></div>
+            <div class="flex justify-between border-b border-dashed border-line pb-2"><span>EST. TIME</span><span class="text-ink">15–60 min</span></div>
+            <div class="flex justify-between"><span>SKILL LEVEL</span><span class="text-ink">Beginner+</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS BAND -->
+<section class="bg-ink text-paper py-10">
+  <div class="max-w-7xl mx-auto px-5 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+    <div>
+      <p class="font-display font-900 text-4xl md:text-5xl text-rust"><span class="counter" data-target="41200">0</span>+</p>
+      <p class="font-mono text-xs tracking-wide text-paper/60 mt-1">REPAIR GUIDES</p>
+    </div>
+    <div>
+      <p class="font-display font-900 text-4xl md:text-5xl text-rust"><span class="counter" data-target="8400">0</span>+</p>
+      <p class="font-mono text-xs tracking-wide text-paper/60 mt-1">PARTS IN STOCK</p>
+    </div>
+    <div>
+      <p class="font-display font-900 text-4xl md:text-5xl text-rust"><span class="counter" data-target="20">0</span></p>
+      <p class="font-mono text-xs tracking-wide text-paper/60 mt-1">YEARS KEEPING THINGS ALIVE</p>
+    </div>
+    <div>
+      <p class="font-display font-900 text-4xl md:text-5xl text-rust"><span class="counter" data-target="92">0</span>%</p>
+      <p class="font-mono text-xs tracking-wide text-paper/60 mt-1">FIRST-TRY FIX RATE</p>
+    </div>
+  </div>
+</section>
+
+<!-- CATEGORIES -->
+<section id="categories" class="py-16 border-b border-line">
+  <div class="max-w-7xl mx-auto px-5">
+    <div class="flex items-end justify-between mb-8">
+      <h2 class="font-display font-900 text-3xl md:text-4xl">BROWSE BY DEVICE</h2>
+      <a href="#" class="font-mono text-xs text-rust hover:underline hidden sm:inline">ALL CATEGORIES →</a>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+      <!-- Phone -->
+      <button class="cat-chip card-lift bg-white border border-line rounded-xl p-5 flex flex-col items-center gap-3 text-center" data-cat="phone">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#3A5A66" stroke-width="1.8"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2" stroke-linecap="round"/></svg>
+        <span class="text-sm font-medium">Phone</span>
+      </button>
+      <!-- Laptop -->
+      <button class="cat-chip card-lift bg-white border border-line rounded-xl p-5 flex flex-col items-center gap-3 text-center" data-cat="laptop">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#3A5A66" stroke-width="1.8"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M2 19h20" stroke-linecap="round"/></svg>
+        <span class="text-sm font-medium">Laptop</span>
+      </button>
+      <!-- Console -->
+      <button class="cat-chip card-lift bg-white border border-line rounded-xl p-5 flex flex-col items-center gap-3 text-center" data-cat="console">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#3A5A66" stroke-width="1.8"><path d="M6 9h3l1.5-2h3L15 9h3a3 3 0 0 1 3 3v4a2 2 0 0 1-2 2c-1 0-1.4-.5-2-1l-1-1H8l-1 1c-.6.5-1 1-2 1a2 2 0 0 1-2-2v-4a3 3 0 0 1 3-3Z"/><circle cx="9" cy="13" r=".6" fill="#3A5A66"/></svg>
+        <span class="text-sm font-medium">Console</span>
+      </button>
+      <!-- Tablet -->
+      <button class="cat-chip card-lift bg-white border border-line rounded-xl p-5 flex flex-col items-center gap-3 text-center" data-cat="tablet">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#3A5A66" stroke-width="1.8"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M11 18h2" stroke-linecap="round"/></svg>
+        <span class="text-sm font-medium">Tablet</span>
+      </button>
+      <!-- Watch -->
+      <button class="cat-chip card-lift bg-white border border-line rounded-xl p-5 flex flex-col items-center gap-3 text-center" data-cat="watch">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#3A5A66" stroke-width="1.8"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M9 7V4h6v3M9 17v3h6v-3" stroke-linecap="round"/></svg>
+        <span class="text-sm font-medium">Watch</span>
+      </button>
+      <!-- Appliance -->
+      <button class="cat-chip card-lift bg-white border border-line rounded-xl p-5 flex flex-col items-center gap-3 text-center" data-cat="appliance">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#3A5A66" stroke-width="1.8"><rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="14" r="4"/><path d="M8 6h.01M11 6h.01" stroke-linecap="round"/></svg>
+        <span class="text-sm font-medium">Appliance</span>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- GUIDES -->
+<section id="guides" class="py-16 border-b border-line bg-paper-dark/40">
+  <div class="max-w-7xl mx-auto px-5">
+    <div class="flex flex-wrap items-end justify-between gap-4 mb-8">
+      <h2 class="font-display font-900 text-3xl md:text-4xl">TRENDING REPAIRS</h2>
+      <div class="flex gap-2 font-mono text-xs" id="chipRow">
+        <button class="chip px-3 py-1.5 border border-ink rounded-full" data-filter="all" aria-pressed="true">ALL</button>
+        <button class="chip px-3 py-1.5 border border-line rounded-full hover:border-ink transition-colors" data-filter="phone" aria-pressed="false">PHONE</button>
+        <button class="chip px-3 py-1.5 border border-line rounded-full hover:border-ink transition-colors" data-filter="laptop" aria-pressed="false">LAPTOP</button>
+        <button class="chip px-3 py-1.5 border border-line rounded-full hover:border-ink transition-colors" data-filter="console" aria-pressed="false">CONSOLE</button>
+        <button class="chip px-3 py-1.5 border border-line rounded-full hover:border-ink transition-colors" data-filter="appliance" aria-pressed="false">APPLIANCE</button>
+      </div>
+    </div>
+
+    <div id="guideGrid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+  </div>
+</section>
+
+<!-- REPAIRABILITY SCORE -->
+<section id="score" class="py-16 border-b border-line">
+  <div class="max-w-7xl mx-auto px-5 grid lg:grid-cols-2 gap-12 items-center">
+    <div class="flex justify-center">
+      <svg width="260" height="160" viewBox="0 0 260 160">
+        <path d="M20 140 A110 110 0 0 1 240 140" fill="none" stroke="#B8B0A0" stroke-width="16" stroke-linecap="round" opacity="0.4"/>
+        <path id="gaugeArc" d="M20 140 A110 110 0 0 1 240 140" fill="none" stroke="#C4592A" stroke-width="16" stroke-linecap="round"
+          stroke-dasharray="345" stroke-dashoffset="345"/>
+        <text x="130" y="120" text-anchor="middle" class="font-display" font-weight="900" font-size="46" fill="#1F2421">9</text>
+        <text x="130" y="142" text-anchor="middle" class="font-mono" font-size="11" fill="#1F2421" opacity="0.6">OUT OF 10</text>
+      </svg>
+    </div>
+    <div>
+      <span class="font-mono text-xs tracking-widest text-steel">THE REPAIRABILITY SCORE</span>
+      <h2 class="font-display font-900 text-3xl md:text-4xl mt-2 mb-4">A NUMBER THAT TELLS YOU<br>HOW MUCH POWER YOU HAVE.</h2>
+      <p class="text-ink/70 mb-6 max-w-md">Every device we tear down gets rated 1–10 on how easy it actually is to fix. Here's what separates a 9 from a 2.</p>
+      <ul class="space-y-3 max-w-md">
+        <li class="flex gap-3 items-start"><svg class="mt-0.5 shrink-0" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4C6444" stroke-width="2.5"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Battery isn't glued to the case</span></li>
+        <li class="flex gap-3 items-start"><svg class="mt-0.5 shrink-0" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4C6444" stroke-width="2.5"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Standard screws — no proprietary fasteners</span></li>
+        <li class="flex gap-3 items-start"><svg class="mt-0.5 shrink-0" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4C6444" stroke-width="2.5"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Modular parts you can swap without a heat gun</span></li>
+        <li class="flex gap-3 items-start"><svg class="mt-0.5 shrink-0" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4C6444" stroke-width="2.5"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Free repair manual, no NDA required</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- PARTS & TOOLS -->
+<section id="parts" class="py-16 border-b border-line bg-paper-dark/40">
+  <div class="max-w-7xl mx-auto px-5">
+    <div class="flex items-end justify-between mb-8">
+      <h2 class="font-display font-900 text-3xl md:text-4xl">PARTS &amp; TOOLS</h2>
+      <a href="#" class="font-mono text-xs text-rust hover:underline hidden sm:inline">SHOP ALL →</a>
+    </div>
+    <div class="scroll-row flex gap-5 overflow-x-auto pb-4 snap-x">
+      <!-- tool cards injected via JS -->
+    </div>
+  </div>
+</section>
+
+<!-- NEWSLETTER -->
+<section class="py-16 bg-ink text-paper">
+  <div class="max-w-3xl mx-auto px-5 text-center">
+    <h2 class="font-display font-900 text-3xl md:text-4xl mb-3">GET A NEW GUIDE EVERY WEEK</h2>
+    <p class="text-paper/60 mb-6">No spam. Just one good repair in your inbox, every Tuesday.</p>
+    <form id="newsletterForm" class="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+      <input type="email" required placeholder="you@example.com" class="flex-1 rounded-md px-4 py-3 text-ink bg-paper border border-paper focus:outline-none focus:border-rust">
+      <button class="bg-rust hover:bg-rust-dark transition-colors font-mono text-sm px-5 py-3 rounded-md">SUBSCRIBE</button>
+    </form>
+    <p id="newsletterMsg" class="font-mono text-xs text-rust mt-3 h-4"></p>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="bg-paper-dark border-t border-line pt-14 pb-8">
+  <div class="max-w-7xl mx-auto px-5 grid sm:grid-cols-2 lg:grid-cols-5 gap-10">
+    <div class="col-span-2 lg:col-span-1">
+      <span class="font-display font-900 text-2xl">TORQUE</span>
+      <p class="text-sm text-ink/60 mt-3 max-w-xs">A manual for fixing the things you own, instead of replacing them.</p>
+    </div>
+    <div>
+      <p class="font-mono text-xs text-ink/50 mb-3 tracking-wide">GUIDES</p>
+      <ul class="space-y-2 text-sm">
+        <li><a href="#" class="hover:text-rust">By Device</a></li>
+        <li><a href="#" class="hover:text-rust">By Brand</a></li>
+        <li><a href="#" class="hover:text-rust">Most Repairable</a></li>
+        <li><a href="#" class="hover:text-rust">Hardest Fixes</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="font-mono text-xs text-ink/50 mb-3 tracking-wide">PARTS &amp; TOOLS</p>
+      <ul class="space-y-2 text-sm">
+        <li><a href="#" class="hover:text-rust">Batteries</a></li>
+        <li><a href="#" class="hover:text-rust">Screens</a></li>
+        <li><a href="#" class="hover:text-rust">Tool Kits</a></li>
+        <li><a href="#" class="hover:text-rust">Adhesives</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="font-mono text-xs text-ink/50 mb-3 tracking-wide">COMMUNITY</p>
+      <ul class="space-y-2 text-sm">
+        <li><a href="#" class="hover:text-rust">Forum</a></li>
+        <li><a href="#" class="hover:text-rust">Write a Guide</a></li>
+        <li><a href="#" class="hover:text-rust">Right to Repair</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="font-mono text-xs text-ink/50 mb-3 tracking-wide">COMPANY</p>
+      <ul class="space-y-2 text-sm">
+        <li><a href="#" class="hover:text-rust">About</a></li>
+        <li><a href="#" class="hover:text-rust">Careers</a></li>
+        <li><a href="#" class="hover:text-rust">Contact</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="max-w-7xl mx-auto px-5 mt-10 pt-6 border-t border-line flex flex-wrap justify-between gap-3 text-xs text-ink/50 font-mono">
+    <span>© 2026 TORQUE. A fictional demo site.</span>
+    <span>Built to show what's fixable.</span>
+  </div>
+</footer>
+
+<button id="topBtn" class="hidden fixed bottom-6 right-6 bg-ink text-paper w-11 h-11 rounded-full shadow-lg items-center justify-center hover:bg-rust transition-colors z-40" aria-label="Back to top">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 19V5M5 12l7-7 7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</button>
+
+<script>
+  // ---------- Mobile menu ----------
+  const menuBtn = document.getElementById('menuBtn');
+  const mobilePanel = document.getElementById('mobilePanel');
+  menuBtn.addEventListener('click', () => {
+    const open = mobilePanel.classList.toggle('hidden') === false;
+    menuBtn.setAttribute('aria-expanded', open);
+  });
+
+  // ---------- Smooth scroll ----------
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        mobilePanel.classList.add('hidden');
+      }
+    });
+  });
+
+  // ---------- Search suggestions ----------
+  const DEVICES = ['iPhone 15 Pro','iPhone 14','MacBook Air M2','MacBook Pro 16"','Samsung Galaxy S23','Nintendo Switch','Nintendo Switch OLED','PS5 Controller','Dyson V8','iPad Air','Apple Watch Series 9','Steam Deck'];
+  const heroSearch = document.getElementById('heroSearch');
+  const heroSuggest = document.getElementById('heroSuggest');
+  heroSearch.addEventListener('input', () => {
+    const q = heroSearch.value.trim().toLowerCase();
+    if (!q) { heroSuggest.classList.add('hidden'); return; }
+    const matches = DEVICES.filter(d => d.toLowerCase().includes(q)).slice(0,5);
+    if (!matches.length) { heroSuggest.classList.add('hidden'); return; }
+    heroSuggest.innerHTML = matches.map(m =>
+      `<button type="button" class="suggest-item w-full text-left px-4 py-2.5 hover:bg-paper-dark border-b border-line last:border-0">${m}</button>`
+    ).join('');
+    heroSuggest.classList.remove('hidden');
+  });
+  heroSuggest.addEventListener('click', e => {
+    if (e.target.classList.contains('suggest-item')) {
+      heroSearch.value = e.target.textContent;
+      heroSuggest.classList.add('hidden');
+    }
+  });
+  document.addEventListener('click', e => {
+    if (!heroSearch.contains(e.target) && !heroSuggest.contains(e.target)) heroSuggest.classList.add('hidden');
+  });
+  document.querySelectorAll('.quick-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById('categories').scrollIntoView({ behavior:'smooth' });
+    });
+  });
+
+  // ---------- Guide data + render ----------
+  const GUIDES = [
+    { title:'iPhone 15 Pro Battery Replacement', cat:'phone', catLabel:'Phone', diff:'Moderate', diffColor:'#C4592A', time:'35 min', score:7 },
+    { title:'MacBook Air M2 Screen Replacement', cat:'laptop', catLabel:'Laptop', diff:'Difficult', diffColor:'#A8481F', time:'70 min', score:4 },
+    { title:'Switch Joy-Con Drift Fix', cat:'console', catLabel:'Console', diff:'Easy', diffColor:'#4C6444', time:'20 min', score:8 },
+    { title:'Dyson V8 Battery Swap', cat:'appliance', catLabel:'Appliance', diff:'Easy', diffColor:'#4C6444', time:'15 min', score:9 },
+    { title:'PS5 Controller Stick Module', cat:'console', catLabel:'Console', diff:'Moderate', diffColor:'#C4592A', time:'25 min', score:7 },
+    { title:'Galaxy S23 Charging Port Repair', cat:'phone', catLabel:'Phone', diff:'Difficult', diffColor:'#A8481F', time:'50 min', score:5 },
+  ];
+
+  const guideGrid = document.getElementById('guideGrid');
+  function renderGuides(filter) {
+    const items = filter === 'all' ? GUIDES : GUIDES.filter(g => g.cat === filter);
+    guideGrid.innerHTML = items.map(g => `
+      <div class="card-lift bg-white border border-line rounded-xl overflow-hidden">
+        <div class="h-32 bg-gradient-to-br from-steel/20 to-rust/20 relative flex items-center justify-center">
+          <span class="font-mono text-[10px] tracking-widest text-ink/40 absolute top-3 left-3">${g.catLabel.toUpperCase()}</span>
+          <div class="w-14 h-14 rounded-full border-2 border-ink/10" style="background:conic-gradient(#C4592A ${g.score*36}deg, #E2DDCF 0deg)"></div>
+        </div>
+        <div class="p-5">
+          <h3 class="font-semibold leading-snug mb-2">${g.title}</h3>
+          <div class="flex items-center gap-3 text-xs font-mono">
+            <span class="px-2 py-0.5 rounded-full" style="background:${g.diffColor}1A; color:${g.diffColor};">${g.diff}</span>
+            <span class="text-ink/50">${g.time}</span>
+            <span class="text-ink/50 ml-auto">SCORE ${g.score}/10</span>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+  renderGuides('all');
+
+  document.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed','false'));
+      chip.setAttribute('aria-pressed','true');
+      renderGuides(chip.dataset.filter);
+    });
+  });
+  document.querySelectorAll('.cat-chip').forEach(cat => {
+    cat.addEventListener('click', () => {
+      const target = cat.dataset.cat;
+      document.getElementById('guides').scrollIntoView({ behavior:'smooth' });
+      const matchingChip = document.querySelector(`.chip[data-filter="${target}"]`);
+      if (matchingChip) matchingChip.click();
+    });
+  });
+
+  // ---------- Tools row ----------
+  const TOOLS = [
+    { name:'Precision Bit Driver Set', desc:'64 bits, fits almost everything', price:'29.99' },
+    { name:'Nylon Pry Tool', desc:'Won\'t scratch glass or metal', price:'4.99' },
+    { name:'Suction Handle', desc:'For lifting glued-down screens', price:'14.99' },
+    { name:'Anti-Static Wrist Strap', desc:'Protects sensitive boards', price:'7.99' },
+    { name:'Replacement Adhesive Kit', desc:'Reseal it like new', price:'9.99' },
+  ];
+  const toolsRow = document.querySelector('#parts .scroll-row');
+  toolsRow.innerHTML = TOOLS.map(t => `
+    <div class="snap-start shrink-0 w-56 bg-white border border-line rounded-lg p-5 card-lift relative">
+      <div class="absolute -top-2 -right-2 bg-rust text-white font-mono text-xs px-2 py-1 rounded shadow">$${t.price}</div>
+      <div class="w-10 h-10 rounded-full bg-steel/10 mb-4 flex items-center justify-center">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3A5A66" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <h4 class="font-semibold text-sm mb-1">${t.name}</h4>
+      <p class="text-xs text-ink/55 mb-4">${t.desc}</p>
+      <button class="font-mono text-xs border border-ink rounded-md px-3 py-1.5 hover:bg-ink hover:text-paper transition-colors w-full">ADD TO KIT</button>
+    </div>
+  `).join('');
+
+  // ---------- Counters ----------
+  const counters = document.querySelectorAll('.counter');
+  let countersStarted = false;
+  function animateCounters() {
+    if (countersStarted) return;
+    countersStarted = true;
+    counters.forEach(el => {
+      const target = parseInt(el.dataset.target, 10);
+      const duration = 1400;
+      const start = performance.now();
+      function tick(now) {
+        const progress = Math.min((now - start) / duration, 1);
+        el.textContent = Math.floor(progress * target).toLocaleString();
+        if (progress < 1) requestAnimationFrame(tick);
+        else el.textContent = target.toLocaleString();
+      }
+      requestAnimationFrame(tick);
+    });
+  }
+
+  // ---------- Gauge animation ----------
+  const gaugeArc = document.getElementById('gaugeArc');
+  let gaugeAnimated = false;
+  function animateGauge() {
+    if (gaugeAnimated) return;
+    gaugeAnimated = true;
+    const total = 345;
+    const offset = total - (9/10) * total;
+    requestAnimationFrame(() => { gaugeArc.style.transition = 'stroke-dashoffset 1.4s cubic-bezier(.16,1,.3,1)'; gaugeArc.setAttribute('stroke-dashoffset', offset); });
+  }
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      if (entry.target.id === 'guides' || entry.target.tagName === 'SECTION') {}
+    });
+  }, { threshold: 0.3 });
+
+  const statsSection = document.querySelector('.bg-ink.text-paper.py-10');
+  new IntersectionObserver((entries, obs) => {
+    entries.forEach(e => { if (e.isIntersecting) { animateCounters(); obs.disconnect(); } });
+  }, { threshold: 0.4 }).observe(statsSection);
+
+  new IntersectionObserver((entries, obs) => {
+    entries.forEach(e => { if (e.isIntersecting) { animateGauge(); obs.disconnect(); } });
+  }, { threshold: 0.4 }).observe(document.getElementById('score'));
+
+  // ---------- Newsletter ----------
+  document.getElementById('newsletterForm').addEventListener('submit', e => {
+    e.preventDefault();
+    document.getElementById('newsletterMsg').textContent = "You're on the list. First guide arrives Tuesday.";
+    e.target.reset();
+  });
+
+  // ---------- Back to top ----------
+  const topBtn = document.getElementById('topBtn');
+  window.addEventListener('scroll', () => {
+    if (window.scrollY > 500) { topBtn.classList.remove('hidden'); topBtn.classList.add('flex'); }
+    else { topBtn.classList.add('hidden'); topBtn.classList.remove('flex'); }
+  });
+  topBtn.addEventListener('click', () => window.scrollTo({ top:0, behavior:'smooth' }));
+</script>
+</body>
+</html>
